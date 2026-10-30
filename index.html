@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gerenciador em Massa - Álbum de Casamento</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body class="bg-gradient-to-br from-amber-50 to-rose-50 min-h-screen flex items-center justify-center p-4 font-sans text-gray-800">
+
+    <div class="bg-white rounded-2xl max-w-xl w-full p-6 shadow-2xl border border-rose-200 space-y-6">
+        <div class="text-center">
+            <h1 class="font-serif text-2xl font-bold text-rose-700">Painel de Gerenciamento em Massa</h1>
+            <p class="text-xs text-gray-500 mt-1">Configure slots e preencha apenas os espaços vazios com novas fotos.</p>
+        </div>
+
+        <!-- Credenciais Supabase -->
+        <div class="space-y-3 bg-gray-50 p-4 rounded-xl border border-gray-200">
+            <h3 class="text-xs font-bold uppercase tracking-wider text-rose-700"><i class="fa-solid fa-database"></i> Conexão Supabase</h3>
+            <div>
+                <label class="block text-[10px] font-semibold uppercase tracking-wider text-gray-600 mb-1">Supabase URL</label>
+                <input type="url" id="bulkUrl" required class="w-full px-3 py-2 border rounded-lg text-xs" placeholder="https://xyz.supabase.co">
+            </div>
+            <div>
+                <label class="block text-[10px] font-semibold uppercase tracking-wider text-gray-600 mb-1">Supabase Anon Key</label>
+                <input type="text" id="bulkKey" required class="w-full px-3 py-2 border rounded-lg text-xs" placeholder="eyJhbGciOi...">
+            </div>
+        </div>
+
+        <!-- 1. Configurar Slots em Massa -->
+        <form id="bulkSlotsForm" onsubmit="applyBulkSlots(event)" class="bg-rose-50/50 p-4 rounded-xl border border-rose-200 space-y-3">
+            <h3 class="text-xs font-bold uppercase tracking-wider text-rose-700"><i class="fa-solid fa-book-open"></i> 1. Definir Slots de Páginas</h3>
+            <div class="grid grid-cols-2 gap-2">
+                <div>
+                    <label class="block text-[10px] font-semibold uppercase tracking-wider text-gray-600 mb-1">Página Inicial</label>
+                    <input type="number" id="startPage" min="1" value="1" required class="w-full px-2 py-1.5 border rounded text-xs bg-white">
+                </div>
+                <div>
+                    <label class="block text-[10px] font-semibold uppercase tracking-wider text-gray-600 mb-1">Página Final</label>
+                    <input type="number" id="endPage" min="1" value="48" required class="w-full px-2 py-1.5 border rounded text-xs bg-white">
+                </div>
+            </div>
+            <div>
+                <label class="block text-[10px] font-semibold uppercase tracking-wider text-gray-600 mb-1">Quantidade de Slots</label>
+                <select id="bulkSlots" class="w-full px-2 py-1.5 border rounded text-xs bg-white font-bold text-rose-700">
+                    <option value="6">6 Fotos (Galeria em Massa)</option>
+                    <option value="4">4 Fotos (Mosaico)</option>
+                    <option value="2">2 Fotos (Grande)</option>
+                    <option value="1">1 Foto (Destaque)</option>
+                </select>
+            </div>
+            <button type="submit" class="w-full py-2 bg-rose-600 hover:bg-rose-700 text-white rounded-lg font-bold text-xs shadow transition flex items-center justify-center gap-1.5">
+                <i class="fa-solid fa-bolt"></i> Aplicar Slots em Massa
+            </button>
+        </form>
+
+        <!-- 2. Upload em Massa Preenchendo Apenas Vazios -->
+        <form id="bulkUploadForm" onsubmit="applyBulkUpload(event)" class="bg-amber-50/50 p-4 rounded-xl border border-amber-200 space-y-3">
+            <h3 class="text-xs font-bold uppercase tracking-wider text-amber-800"><i class="fa-solid fa-cloud-arrow-up"></i> 2. Upload Preenchendo Apenas Slots Vazios</h3>
+            <div>
+                <label class="block text-[10px] font-semibold uppercase tracking-wider text-gray-600 mb-1">Selecionar Imagens (várias de uma vez)</label>
+                <input type="file" id="bulkPhotosInput" accept="image/*" multiple required class="w-full text-xs text-gray-500 file:py-1.5 file:px-3 file:rounded file:border-0 file:bg-amber-100 file:text-amber-800 file:font-semibold">
+            </div>
+            <div class="grid grid-cols-2 gap-2">
+                <div>
+                    <label class="block text-[10px] font-semibold uppercase tracking-wider text-gray-600 mb-1">Categoria</label>
+                    <select id="bulkCategory" class="w-full px-2 py-1.5 border rounded text-xs bg-white">
+                        <option value="cerimonia">Cerimônia</option>
+                        <option value="festa">Festa</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-[10px] font-semibold uppercase tracking-wider text-gray-600 mb-1">Começar na Página</label>
+                    <input type="number" id="bulkStartPage" min="1" value="1" required class="w-full px-2 py-1.5 border rounded text-xs bg-white">
+                </div>
+            </div>
+            <div class="grid grid-cols-2 gap-2">
+                <div>
+                    <label class="block text-[10px] font-semibold uppercase tracking-wider text-gray-600 mb-1">Legenda / Título Padrão</label>
+                    <input type="text" id="bulkTitle" placeholder="Ex: Momento Especial" class="w-full px-2 py-1.5 border rounded text-xs bg-white">
+                    <span class="text-[9px] text-gray-500">Deixe em branco para usar o nome do arquivo</span>
+                </div>
+                <div>
+                    <label class="block text-[10px] font-semibold uppercase tracking-wider text-gray-600 mb-1">Enviado por (Autor)</label>
+                    <input type="text" id="bulkAuthor" value="Pflares" required class="w-full px-2 py-1.5 border rounded text-xs bg-white">
+                </div>
+            </div>
+            <button type="submit" class="w-full py-2 bg-amber-600 hover:bg-amber-700 text-white rounded-lg font-bold text-xs shadow transition flex items-center justify-center gap-1.5">
+                <i class="fa-solid fa-images"></i> Preencher Slots Vazios em Massa
+            </button>
+        </form>
+
+        <div id="statusMsg" class="text-center text-xs font-semibold min-h-[24px]"></div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            document.getElementById('bulkUrl').value = localStorage.getItem('supabase_url') || '';
+            document.getElementById('bulkKey').value = localStorage.getItem('supabase_key') || '';
+        });
+
+        function getSupabase() {
+            const url = document.getElementById('bulkUrl').value.trim();
+            const key = document.getElementById('bulkKey').value.trim();
+            localStorage.setItem('supabase_url', url);
+            localStorage.setItem('supabase_key', key);
+            return supabase.createClient(url, key);
+        }
+
+        async function applyBulkSlots(e) {
+            e.preventDefault();
+            const supabaseClient = getSupabase();
+            const start = parseInt(document.getElementById('startPage').value);
+            const end = parseInt(document.getElementById('endPage').value);
+            const slotsValue = parseInt(document.getElementById('bulkSlots').value);
+            const statusDiv = document.getElementById('statusMsg');
+
+            statusDiv.innerHTML = `<span class="text-blue-600"><i class="fa-solid fa-spinner fa-spin"></i> Configurando slots...</span>`;
+
+            try {
+                let { data: cfgData } = await supabaseClient.from('album_config').select('*').eq('id', 1).single();
+                let pageSlots = (cfgData && cfgData.page_slots) ? cfgData.page_slots : {};
+                let totalPages = (cfgData && cfgData.total_pages) ? cfgData.total_pages : end;
+                if (end > totalPages) totalPages = end;
+
+                for (let i = start; i <= end; i++) {
+                    pageSlots[i] = slotsValue;
+                }
+
+                const { error } = await supabaseClient.from('album_config').upsert({
+                    id: 1,
+                    page_slots: pageSlots,
+                    total_pages: totalPages,
+                    updated_at: new Date()
+                });
+
+                if (error) throw error;
+                statusDiv.innerHTML = `<span class="text-green-600 font-bold"><i class="fa-solid fa-check-circle"></i> Slots das páginas ${start} a ${end} aplicados com sucesso!</span>`;
+            } catch (err) {
+                statusDiv.innerHTML = `<span class="text-red-600">Erro: ${err.message}</span>`;
+            }
+        }
+
+        async function applyBulkUpload(e) {
+            e.preventDefault();
+            const supabaseClient = getSupabase();
+            const files = document.getElementById('bulkPhotosInput').files;
+            const category = document.getElementById('bulkCategory').value;
+            let pageNum = parseInt(document.getElementById('bulkStartPage').value);
+            const customTitle = document.getElementById('bulkTitle').value.trim();
+            const author = document.getElementById('bulkAuthor').value;
+            const statusDiv = document.getElementById('statusMsg');
+
+            if (!files || files.length === 0) {
+                alert('Selecione pelo menos uma imagem.');
+                return;
+            }
+
+            statusDiv.innerHTML = `<span class="text-blue-600"><i class="fa-solid fa-spinner fa-spin"></i> Verificando fotos existentes no banco...</span>`;
+
+            try {
+                let { data: cfgData } = await supabaseClient.from('album_config').select('*').eq('id', 1).single();
+                let pageSlotsConfig = (cfgData && cfgData.page_slots) ? cfgData.page_slots : {};
+
+                let { data: existingPhotos } = await supabaseClient.from('fotos_casamento').select('*');
+                let photosList = existingPhotos || [];
+
+                let fileIndex = 0;
+
+                while (fileIndex < files.length) {
+                    let maxSlots = pageSlotsConfig[pageNum] || 6;
+                    let photosOnThisPage = photosList.filter(p => p.page_number === pageNum).length;
+                    let emptySlotsOnPage = maxSlots - photosOnThisPage;
+
+                    if (emptySlotsOnPage <= 0) {
+                        pageNum++;
+                        continue;
+                    }
+
+                    while (emptySlotsOnPage > 0 && fileIndex < files.length) {
+                        const file = files[fileIndex];
+                        statusDiv.innerHTML = `<span class="text-blue-600"><i class="fa-solid fa-spinner fa-spin"></i> Enviando foto ${fileIndex + 1} de ${files.length} para a página ${pageNum}...</span>`;
+
+                        const ext = file.name.split('.').pop();
+                        const path = `fotos/massa_${Date.now()}_${fileIndex}.${ext}`;
+                        
+                        const { error: uploadErr } = await supabaseClient.storage.from('casamento').upload(path, file);
+                        if (uploadErr) throw uploadErr;
+
+                        const { data: pubData } = supabaseClient.storage.from('casamento').getPublicUrl(path);
+                        const imageUrl = pubData.publicUrl;
+
+                        // Se preencheu o campo de legenda, usa ele + número sequencial, senão usa o nome do arquivo
+                        let titleName = customTitle ? `${customTitle} ${fileIndex + 1}` : (file.name.substring(0, file.name.lastIndexOf('.')) || `Foto ${fileIndex + 1}`);
+
+                        const { data: newInserted, error: insertErr } = await supabaseClient.from('fotos_casamento').insert([{
+                            title: titleName,
+                            author: author,
+                            category: category,
+                            page_number: pageNum,
+                            image_url: imageUrl
+                        }]).select();
+
+                        if (insertErr) throw insertErr;
+
+                        if (newInserted) photosList.push(newInserted[0]);
+
+                        fileIndex++;
+                        emptySlotsOnPage--;
+                    }
+
+                    if (emptySlotsOnPage === 0) {
+                        pageNum++;
+                    }
+                }
+
+                statusDiv.innerHTML = `<span class="text-green-600 font-bold"><i class="fa-solid fa-check-circle"></i> Todas as fotos foram enviadas preenchendo apenas os espaços vazios com as legendas!</span>`;
+                document.getElementById('bulkUploadForm').reset();
+            } catch (err) {
+                statusDiv.innerHTML = `<span class="text-red-600">Erro no upload: ${err.message}</span>`;
+            }
+        }
+    </script>
+</body>
+</html>
